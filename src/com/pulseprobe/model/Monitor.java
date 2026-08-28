@@ -1,24 +1,25 @@
 package com.pulseprobe.model;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 public class Monitor {
-
-    // fields
-    private enum Status {
+    public enum Status {
         UP, DOWN, PENDING, PAUSED
     }
 
     private final String id;
     private String name;
     private String url;
-    private Integer intervalSeconds;
+    private int intervalSeconds;
     private Status status;
-    private Boolean active;
-    private final Integer MAX_HISTORY = 30;
-    private Queue<CheckResult> History = new LinkedList<>();
+    private boolean active;
 
-    // constructor
+    // Thread-safe ring buffer: Keeps the latest 30 ping results for sparkline
+    // charts
+    private static final int MAX_HISTORY = 30;
+    private final Deque<CheckResult> history = new ConcurrentLinkedDeque<>();
+
     public Monitor(String name, String url, int intervalSeconds) {
         this.id = UUID.randomUUID().toString().substring(0, 8);
         this.name = name;
@@ -28,7 +29,6 @@ public class Monitor {
         this.active = true;
     }
 
-    // getters
     public String getId() {
         return id;
     }
@@ -41,7 +41,7 @@ public class Monitor {
         return url;
     }
 
-    public Integer getIntervalSeconds() {
+    public int getIntervalSeconds() {
         return intervalSeconds;
     }
 
@@ -49,51 +49,52 @@ public class Monitor {
         return status;
     }
 
-    public Boolean isActive() {
+    public boolean isActive() {
         return active;
     }
 
-    public Queue<CheckResult> getHistory() {
-        return new LinkedList<>(History);
-    }
-
-    public Double getUpTimePercentage() {
-        if (History.size() == 0)
-            return 100.0;
-        long successful = History.stream().filter(CheckResult::isSuccess).count();
-        return ((Double) successful / History.size()) / 100.0;
-    }
-
-    public Long getAverageLatency(){
-        if(History.isEmpty()) return 0;
-        return (Long) History.stream()
-                        .filter(CheckResult::isSuccess)
-                        .mapToLong(CheckResult::getlatencyMs())
-                        .average()
-                        .orElse(0);
-    }
-
-    // setters
     public void setStatus(Status status) {
         this.status = status;
     }
 
-    public void setActive(Boolean active) {
+    public void setActive(boolean active) {
         this.active = active;
+        if (!active)
+            this.status = Status.PAUSED;
     }
 
-    // methods
     public synchronized void addResult(CheckResult result) {
-        if (History.size() >= MAX_HISTORY) {
-            CheckResult idc = History.remove();
+        if (history.size() >= MAX_HISTORY) {
+            history.pollFirst(); // Remove oldest
         }
-        History.add(result);
-        this.status = result.isSuccess() ? status.UP : status.DOWN;
+        history.addLast(result);
+        this.status = result.isSuccess() ? Status.UP : Status.DOWN;
+    }
+
+    public List<CheckResult> getHistory() {
+        return new ArrayList<>(history);
+    }
+
+    public double getUptimePercentage() {
+        if (history.isEmpty())
+            return 100.0;
+        long successful = history.stream().filter(CheckResult::isSuccess).count();
+        return ((double) successful / history.size()) * 100.0;
+    }
+
+    public long getAverageLatency() {
+        if (history.isEmpty())
+            return 0;
+        return (long) history.stream()
+                .filter(CheckResult::isSuccess)
+                .mapToLong(CheckResult::getLatencyMs)
+                .average()
+                .orElse(0);
     }
 
     public String toJson() {
         StringBuilder historyJson = new StringBuilder("[");
-        Queue<CheckResult> queue = getHistory();
+        List<CheckResult> list = getHistory();
         for (int i = 0; i < list.size(); i++) {
             historyJson.append(list.get(i).toJson());
             if (i < list.size() - 1)
@@ -110,5 +111,4 @@ public class Monitor {
     private String escapeJson(String raw) {
         return raw.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ");
     }
-
 }

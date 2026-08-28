@@ -3,15 +3,13 @@ package com.pulseprobe.model;
 import java.time.Instant;
 
 public class CheckResult {
-
-    private final Long timestamp;
-    private final Integer statusCode;
-    private final Long latencyMs;
-    private final Boolean success;
+    private final long timestamp;
+    private final int statusCode;
+    private final long latencyMs;
+    private final boolean success;
     private final String error;
 
-    // constructor
-    public CheckResult(Integer statusCode, Long latencyMs, Boolean success, String error) {
+    public CheckResult(int statusCode, long latencyMs, boolean success, String error) {
         this.timestamp = Instant.now().toEpochMilli();
         this.statusCode = statusCode;
         this.latencyMs = latencyMs;
@@ -19,20 +17,19 @@ public class CheckResult {
         this.error = error;
     }
 
-    // getters
-    public Long getTimeStamp() {
+    public long getTimestamp() {
         return timestamp;
     }
 
-    public Integer getStatusCode() {
+    public int getStatusCode() {
         return statusCode;
     }
 
-    public Long getlatencyMs() {
+    public long getLatencyMs() {
         return latencyMs;
     }
 
-    public Boolean isSuccess() {
+    public boolean isSuccess() {
         return success;
     }
 
@@ -40,8 +37,7 @@ public class CheckResult {
         return error;
     }
 
-    // methods
-    public String toJSON() {
+    public String toJson() {
         return String.format(
                 "{\"timestamp\":%d,\"statusCode\":%d,\"latencyMs\":%d,\"success\":%b,\"error\":%s}",
                 timestamp,
@@ -54,5 +50,4 @@ public class CheckResult {
     private String escapeJson(String raw) {
         return raw.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ");
     }
-
 }
