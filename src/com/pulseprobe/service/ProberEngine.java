@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.pulseprobe.model.CheckResult;
 import com.pulseprobe.service.MonitorService;
+import com.pulseprobe.model.Monitor;
 
 public class ProberEngine {
 
@@ -84,8 +85,7 @@ public class ProberEngine {
             }
 
             monitor.addResult(result);
-        } catch (HttpConnectTimeoutException
-                | IOException
+        } catch (IOException
                 | InterruptedException
                 | IllegalArgumentException e) {
             long latencyMs = System.currentTimeMillis() - startTime;
